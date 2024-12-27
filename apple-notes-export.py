@@ -1,61 +1,89 @@
-import pyicloud
-import json
-from datetime import datetime
+import subprocess
 import os
+from datetime import datetime
 
-def export_notes(apple_id, password, output_dir="exported_notes"):
+def export_notes(output_dir="exported_notes"):
     """
-    Export notes from Apple Notes using iCloud API
+    Export notes from Apple Notes using AppleScript
     
     Parameters:
-    apple_id (str): Apple ID (email)
-    password (str): Apple ID password
     output_dir (str): Directory to save exported notes
     """
-    # Create output directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
+    applescript = '''
+    tell application "Notes"
+        set allNotes to every note
+        repeat with currentNote in allNotes
+            set noteContent to body of currentNote
+            set noteTitle to name of currentNote
+            log "title: " & noteTitle
+            log "content: " & noteContent
+        end repeat
+    end tell
+    '''
+    
     try:
-        # Connect to iCloud
-        api = pyicloud.PyiCloudService(apple_id, password)
+        # Выполняем AppleScript
+        result = subprocess.run(['osascript', '-e', applescript], 
+                              capture_output=True, 
+                              text=True)
         
-        # Ensure we're authenticated
-        if api.requires_2fa:
-            print("Two-factor authentication required. Please check your devices and enter the code:")
-            code = input("Enter 2FA code: ")
-            api.validate_2fa_code(code)
+        print("Raw output:", result.stdout)  # Отладочный вывод
+        print("Error output:", result.stderr)  # Отладочный вывод
+        print("Return code:", result.returncode)  # Отладочный вывод
         
-        # Get notes
-        notes = api.notes.all()
-        
-        # Export each note
-        for i, note in enumerate(notes):
-            # Create safe filename
-            filename = f"note_{i}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        if result.returncode == 0:
+            # Обрабатываем каждую заметку
+            notes_data = parse_applescript_output(result.stdout)
             
-            # Export as markdown
-            with open(f"{output_dir}/{filename}.md", "w", encoding="utf-8") as f:
-                f.write(f"# {note.title}\n\n")
-                f.write(note.content)
+            for i, note in enumerate(notes_data):
+                # Создаем безопасное имя файла
+                filename = f"note_{i}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                
+                # Сохраняем как markdown
+                with open(f"{output_dir}/{filename}.md", "w", encoding="utf-8") as f:
+                    f.write(f"# {note['title']}\n\n")
+                    f.write(note['content'])
+                
+            print(f"Successfully exported {len(notes_data)} notes to {output_dir}")
+        else:
+            print(f"Error: {result.stderr}")
             
-            # Also save metadata as JSON
-            metadata = {
-                "title": note.title,
-                "created": str(note.created),
-                "modified": str(note.modified),
-                "author": note.author
-            }
-            
-            with open(f"{output_dir}/{filename}_metadata.json", "w", encoding="utf-8") as f:
-                json.dump(metadata, f, indent=2)
-        
-        print(f"Successfully exported {len(notes)} notes to {output_dir}")
-        
     except Exception as e:
         print(f"Error occurred: {str(e)}")
 
+def parse_applescript_output(output):
+    """
+    Парсит вывод AppleScript и преобразует его в список словарей
+    
+    Parameters:
+    output (str): Вывод AppleScript
+    
+    Returns:
+    list: Список словарей с заметками [{title: str, content: str}, ...]
+    """
+    notes = []
+    
+    # Убираем лишние символы и разбиваем на строки
+    lines = output.strip().split('\n')
+    
+    current_note = {}
+    for line in lines:
+        line = line.strip()
+        if line.startswith('title:'):
+            if current_note:
+                notes.append(current_note)
+            current_note = {'title': line[6:].strip(), 'content': ''}
+        elif line.startswith('content:'):
+            current_note['content'] = line[8:].strip()
+    
+    # Добавляем последнюю заметку
+    if current_note:
+        notes.append(current_note)
+    
+    return notes
+
 if __name__ == "__main__":
-    apple_id = input("Enter your Apple ID: ")
-    password = input("Enter your password: ")
-    export_notes(apple_id, password)
+    export_notes()
