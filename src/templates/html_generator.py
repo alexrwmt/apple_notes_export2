@@ -26,63 +26,7 @@ class HTMLGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{note['title']}</title>
-    <style>
-        body {{ 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            color: #333;
-        }}
-        h1 {{ 
-            color: #1a1a1a;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 10px;
-        }}
-        .content {{
-            margin: 20px 0;
-            white-space: pre-wrap;
-        }}
-        .metadata {{
-            color: #666;
-            font-size: 0.9em;
-            margin: 10px 0;
-        }}
-        .attachments {{
-            margin-top: 20px;
-            padding: 15px;
-            background: #f5f5f5;
-            border-radius: 5px;
-        }}
-        .attachments h2 {{
-            font-size: 1.2em;
-            margin-top: 0;
-        }}
-        .attachment-item {{
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-        }}
-        .attachment-item img {{
-            max-width: 100%;
-            height: auto;
-            margin: 10px 0;
-        }}
-        table {{
-            border-collapse: collapse;
-            width: 100%;
-            margin: 15px 0;
-        }}
-        th, td {{
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }}
-        th {{
-            background-color: #f5f5f5;
-        }}
-    </style>
+   
 </head>
 <body>
     <h1>{note['title']}</h1>
@@ -135,25 +79,35 @@ class HTMLGenerator:
             return f'<div class="metadata">{" | ".join(dates)}</div>'
         return ""
 
-    def create_index_html(self, notes: List[Dict[str, str]]) -> str:
+    def create_index_html(self, notes: List[Dict]) -> str:
         """
-        Создает индексную HTML страницу со списком всех заметок
-
+        Создает HTML страницу со списком всех заметок
+        
         Args:
             notes: Список заметок
-
+            
         Returns:
             str: HTML разметка индексной страницы
         """
-        notes_list = "\n".join(
-            [
-                "<li>"
-                f'<a href="{self._create_safe_filename(note["title"])}.html">'
-                f'{note["title"]}'
-                "</a></li>"
-                for note in notes
-            ]
-        )
+        notes_list = []
+        for note in notes:
+            safe_filename = "".join(
+                c if c.isalnum() or c in ("-", "_") else "_" for c in note["title"]
+            ).lower()
+            
+            notes_list.append(
+                f"""
+                <li>
+                    <div class="note-item">
+                        <a href="{safe_filename}.html">{note['title']}</a>
+                        <div class="note-metadata">
+                            <span>Создано: {note.get('created', 'Нет даты')}</span>
+                            <span>Изменено: {note.get('modified', 'Нет даты')}</span>
+                            <span>Вложений: {len(note.get('attachments', []))}</span>
+                        </div>
+                    </div>
+                </li>"""
+            )
 
         return f"""<!DOCTYPE html>
 <html lang="ru">
@@ -161,38 +115,15 @@ class HTMLGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Список заметок</title>
-    <style>
-        body {{ 
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }}
-        h1 {{ color: #333; }}
-        ul {{ 
-            list-style-type: none;
-            padding: 0;
-        }}
-        li {{ 
-            margin: 10px 0;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }}
-        a {{ 
-            color: #0066cc;
-            text-decoration: none;
-        }}
-        a:hover {{ 
-            text-decoration: underline;
-        }}
-    </style>
+    <link rel="stylesheet" href="static/css/style.css">
 </head>
 <body>
     <h1>Список заметок</h1>
-    <ul>
-        {notes_list}
-    </ul>
+    <div class="notes-container">
+        <ul class="notes-list">
+            {"".join(notes_list)}
+        </ul>
+    </div>
 </body>
 </html>"""
 

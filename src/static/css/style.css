@@ -1,0 +1,140 @@
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    line-height: 1.6;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    color: #333;
+}
+
+h1 { 
+    color: #1a1a1a;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+.content {
+    margin: 20px 0;
+    white-space: pre-wrap;
+}
+
+.metadata {
+    color: #666;
+    font-size: 0.9em;
+    margin: 10px 0;
+}
+
+.attachments {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 5px;
+}
+
+.attachments h2 {
+    font-size: 1.2em;
+    margin-top: 0;
+}
+
+.attachment-item {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+}
+
+.attachment-item img {
+    max-width: 100%;
+    height: auto;
+    margin: 10px 0;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 15px 0;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f5f5f5;
+}
+
+/* Стили для списка заметок */
+ul { 
+    list-style-type: none;
+    padding: 0;
+}
+
+li { 
+    margin: 10px 0;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+a { 
+    color: #0066cc;
+    text-decoration: none;
+}
+
+a:hover { 
+    text-decoration: underline;
+} 
+
+.notes-container {
+    margin: 20px 0;
+}
+
+.notes-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.note-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.note-item:hover {
+    background-color: #f8f8f8;
+}
+
+.note-item a {
+    color: #0066cc;
+    text-decoration: none;
+    font-size: 1.1em;
+    margin-right: 20px;
+}
+
+.note-metadata {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.note-metadata span {
+    margin-right: 15px;
+}
+
+@media (max-width: 600px) {
+    .note-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .note-metadata {
+        margin-top: 10px;
+    }
+    
+    .note-metadata span {
+        display: block;
+        margin-bottom: 5px;
+    }
+} 
