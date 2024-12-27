@@ -1,15 +1,16 @@
-from typing import List, Dict
+from typing import Dict, List
+
 
 class HTMLGenerator:
     """Класс для генерации HTML страниц"""
-    
+
     def create_note_html(self, note: Dict[str, str]) -> str:
         """
         Создает HTML разметку для отдельной заметки
-        
+
         Args:
             note: Словарь с данными заметки
-        
+
         Returns:
             str: HTML разметка заметки
         """
@@ -39,22 +40,27 @@ class HTMLGenerator:
     <div class="content">{note['content']}</div>
 </body>
 </html>"""
-    
+
     def create_index_html(self, notes: List[Dict[str, str]]) -> str:
         """
         Создает индексную HTML страницу со списком всех заметок
-        
+
         Args:
             notes: Список заметок
-        
+
         Returns:
             str: HTML разметка индексной страницы
         """
-        notes_list = "\n".join([
-            f'<li><a href="{self._create_safe_filename(note["title"])}.html">{note["title"]}</a></li>'
-            for note in notes
-        ])
-        
+        notes_list = "\n".join(
+            [
+                "<li>"
+                f'<a href="{self._create_safe_filename(note["title"])}.html">'
+                f'{note["title"]}'
+                "</a></li>"
+                for note in notes
+            ]
+        )
+
         return f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -99,11 +105,13 @@ class HTMLGenerator:
     def _create_safe_filename(self, title: str) -> str:
         """
         Создает безопасное имя файла из заголовка
-        
+
         Args:
             title: Исходный заголовок
-        
+
         Returns:
             str: Безопасное имя файла
         """
-        return "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in title).lower()
+        return "".join(
+            c if c.isalnum() or c in ("-", "_") else "_" for c in title
+        ).lower()

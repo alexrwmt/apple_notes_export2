@@ -1,0 +1,16 @@
+[MASTER]
+ignore=CVS
+
+[FORMAT]
+max-line-length=100
+
+[MESSAGES CONTROL]
+disable=C0111,  # missing-docstring
+        W0611   # unused-import
+
+[BASIC]
+good-names=i,j,k,ex,Run,_,id
+
+[DESIGN]
+max-args=5
+max-attributes=7 

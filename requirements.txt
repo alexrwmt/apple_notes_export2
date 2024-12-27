@@ -1,2 +1,7 @@
 # Project dependencies
 # Add your dependencies here
+
+pylint==3.0.3  # или другая актуальная версия
+black==24.1.1
+isort==5.13.2
+flake8==7.0.0
