@@ -42,64 +42,44 @@ def export_notes(output_dir="notes"):
                               capture_output=True, 
                               text=True)
         
-        print("\nDebug info:")
-        print("Return code:", result.returncode)
-        print("Raw stdout:", result.stdout)  # Добавляем вывод сырых данных
-        print("Raw stderr:", result.stderr)
+        # Используем stderr вместо stdout, так как AppleScript пишет в лог
+        notes_data = parse_applescript_output(result.stderr)
+        print(f"\nFound {len(notes_data)} notes:")
         print("=" * 80)
         
-        if result.returncode == 0:
-            notes_data = parse_applescript_output(result.stdout)
-            print(f"\nParsed {len(notes_data)} notes from output")
+        # Выводим заголовки и первые 5 строк каждой заметки
+        for i, note in enumerate(notes_data, 1):
+            print(f"{i}. {note['title']}")
             
-            if len(notes_data) == 0:
-                print("Warning: No notes were parsed from the output!")
-                print("This might be because:")
-                print("1. Notes app is not running")
-                print("2. No notes are available")
-                print("3. Permission issues with AppleScript")
-                print("\nTry running Notes app first and grant permissions in:")
-                print("System Preferences -> Security & Privacy -> Privacy -> Automation")
-                return
-                
-            print(f"\nFound {len(notes_data)} notes:")
-            print("=" * 80)
+            # Получаем первые 5 строк контента
+            preview_lines = note['content'].split('\n')[:5]
+            preview = '\n   '.join(line.strip() for line in preview_lines if line.strip())
+            if preview:
+                print(f"   {preview}")
+                if len(note['content'].split('\n')) > 5:
+                    print("   ...")
+            print("-" * 80)
+        
+        print()  # Пустая строка для разделения
+        
+        # Сохраняем каждую заметку
+        for i, note in enumerate(notes_data, 1):
+            filename = create_safe_filename(note['title'])
+            file_path = os.path.join(output_dir, f"{filename}.html")
             
-            # Выводим заголовки и первые 5 строк каждой заметки
-            for i, note in enumerate(notes_data, 1):
-                print(f"{i}. {note['title']}")
-                
-                # Получаем первые 5 строк контента
-                preview_lines = note['content'].split('\n')[:5]
-                preview = '\n   '.join(line.strip() for line in preview_lines if line.strip())
-                if preview:
-                    print(f"   {preview}")
-                    if len(note['content'].split('\n')) > 5:
-                        print("   ...")
-                print("-" * 80)
-            
-            print()  # Пустая строка для разделения
-            
-            # Сохраняем каждую заметку
-            for i, note in enumerate(notes_data, 1):
-                filename = create_safe_filename(note['title'])
-                file_path = os.path.join(output_dir, f"{filename}.html")
-                
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(create_html_note(note['title'], note['content']))
-                print(f"Saved note {i}/{len(notes_data)}: {filename}.html")
-            
-            # Создаем индексную страницу
-            index_path = os.path.join(output_dir, "index.html")
-            with open(index_path, "w", encoding="utf-8") as f:
-                f.write(create_index_page(notes_data))
-            print(f"Created index page: {index_path}")
-            
-            print(f"\nExport completed successfully!")
-            print(f"Total notes exported: {len(notes_data)}")
-            print(f"Output directory: {os.path.abspath(output_dir)}")
-        else:
-            print(f"Error executing AppleScript: {result.stderr}")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(create_html_note(note['title'], note['content']))
+            print(f"Saved note {i}/{len(notes_data)}: {filename}.html")
+        
+        # Создаем индексную страницу
+        index_path = os.path.join(output_dir, "index.html")
+        with open(index_path, "w", encoding="utf-8") as f:
+            f.write(create_index_page(notes_data))
+        print(f"Created index page: {index_path}")
+        
+        print(f"\nExport completed successfully!")
+        print(f"Total notes exported: {len(notes_data)}")
+        print(f"Output directory: {os.path.abspath(output_dir)}")
             
     except Exception as e:
         print(f"Error occurred: {str(e)}")
@@ -111,12 +91,9 @@ def parse_applescript_output(output):
     notes = []
     lines = output.strip().split('\n')
     
-    print("\nDebug: Processing", len(lines), "lines of output")
-    
     current_note = None
     for line in lines:
         line = line.strip()
-        
         if line.startswith('title:'):
             # Если есть предыдущая заметка, добавляем её в список
             if current_note:
@@ -128,19 +105,11 @@ def parse_applescript_output(output):
             }
         elif line.startswith('content:') and current_note is not None:
             # Добавляем контент к текущей заметке
-].strip()
+            current_note['content'] = line[8:].strip()
     
     # Добавляем последнюю заметку
     if current_note:
         notes.append(current_note)
-    
-    print(f"Debug: Parsed {len(notes)} notes")
-    
-    # Проверяем, что заметки были найдены
-    if len(notes) == 0:
-        print("Warning: No notes found in the output!")
-        print("Raw output sample:")
-        print(output[:200] + "...")  # Показываем первые 200 символов вывода
     
     return notes
 
@@ -155,8 +124,7 @@ def create_html_note(title, content):
     Returns:
     str: HTML разметка заметки
     """
-    return f"""
-<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -171,16 +139,17 @@ def create_html_note(title, content):
             padding: 20px;
         }}
         h1 {{ color: #333; }}
+        .content {{
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }}
     </style>
 </head>
 <body>
     <h1>{title}</h1>
-    <div class="content">
-        {content}
-    </div>
+    {content}
 </body>
-</html>
-"""
+</html>"""
 
 def create_index_page(notes):
     """
