@@ -23,7 +23,7 @@ dev-install:
 
 # Запуск основного приложения
 run:
-	python src/main.py
+	python run.py
 
 # Запуск линтера
 lint:
