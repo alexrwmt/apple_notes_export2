@@ -1,6 +1,6 @@
 import os
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional
 import logging
@@ -10,20 +10,12 @@ from templates.html_generator import HTMLGenerator
 
 
 @dataclass
-class Attachment:
-    filename: str
-    content: bytes
-    mime_type: str
-
-
-@dataclass
 class Note:
     title: str = ""
     content: str = ""
     html_content: str = ""
     created_date: Optional[datetime] = None
     modified_date: Optional[datetime] = None
-    attachments: List[Attachment] = field(default_factory=list)
 
 
 class NotesExporter:
@@ -115,40 +107,26 @@ class NotesExporter:
 
     def _get_notes_from_apple(self) -> str:
         """Получает заметки из Apple Notes через AppleScript в формате JSON"""
-        script = '''
-            use framework "Foundation"
-            
+        script = """
             tell application "Notes"
-                set noteArray to current application's NSMutableArray's array()
-                
-                repeat with currentNote in every note
-                    set noteDict to current application's NSMutableDictionary's dictionary()
-                    
-                    noteDict's setValue:(name of currentNote) forKey:"title"
-                    noteDict's setValue:((creation date of currentNote) as text) forKey:"created"
-                    noteDict's setValue:((modification date of currentNote) as text) forKey:"modified"
-                    noteDict's setValue:(body of currentNote) forKey:"content"
-                    
-                    set attachmentsArray to current application's NSMutableArray's array()
-                    
-                    repeat with currentAttachment in (attachments of currentNote)
-                        set attachmentDict to current application's NSMutableDictionary's dictionary()
-                        attachmentDict's setValue:((id of currentAttachment) as text) forKey:"id"
-                        attachmentDict's setValue:(name of currentAttachment) forKey:"name"
-                        attachmentDict's setValue:(content type of currentAttachment) forKey:"type"
-                        attachmentsArray's addObject:attachmentDict
+                set allNotes to every note
+                set noteData to ""
+                repeat with currentNote in allNotes
+                    set noteData to noteData & "title:" & name of currentNote & "\n"
+                    set noteData to noteData & "created:" & creation date of currentNote & "\n"
+                    set noteData to noteData & "modified:" & modification date of currentNote & "\n"
+                    set noteData to noteData & "content:" & body of currentNote & "\n"
+                    -- Получаем вложения
+                    set attachmentData to ""
+                    set noteAttachments to attachments of currentNote
+                    repeat with currentAttachment in noteAttachments
+                        set attachmentData to attachmentData & "attachment:" & id of currentAttachment & "|" & name of currentAttachment & "\n"
                     end repeat
-                    
-                    noteDict's setValue:attachmentsArray forKey:"attachments"
-                    noteArray's addObject:noteDict
+                    set noteData to noteData & attachmentData & "---END_NOTE---\n"
                 end repeat
-                
-                set jsonData to current application's NSJSONSerialization's dataWithJSONObject:noteArray options:0 |error|:(missing value)
-                set jsonString to (current application's NSString's alloc()'s initWithData:jsonData encoding:(current application's NSUTF8StringEncoding)) as text
-                
-                return jsonString
+                return noteData
             end tell
-        '''
+        """
 
         try:
             result = subprocess.run(
@@ -159,8 +137,8 @@ class NotesExporter:
             )
             return result.stdout
         except subprocess.CalledProcessError as e:
-            print(f"Error executing AppleScript: {e}")
-            print(f"Error output: {e.stderr}")
+            self.logger.error(f"Error executing AppleScript: {e}")
+            self.logger.error(f"Error output: {e.stderr}")
             raise
 
     def _save_note(self, note: Note) -> None:
@@ -173,23 +151,13 @@ class NotesExporter:
         if not note.title:
             return
 
-        # Сохраняем вложения
-        for attachment in note.attachments:
-            attachment_path = os.path.join(self.attachments_dir, attachment.filename)
-            with open(attachment_path, "wb") as f:
-                f.write(attachment.content)
-
         # Создаем HTML файл
         html_content = self.html_generator.create_note_html(
             {
                 "title": note.title,
                 "content": note.html_content or note.content,
                 "created_date": note.created_date,
-                "modified_date": note.modified_date,
-                "attachments": [
-                    {"filename": att.filename, "mime_type": att.mime_type}
-                    for att in note.attachments
-                ],
+                "modified_date": note.modified_date
             }
         )
 
@@ -210,25 +178,12 @@ class NotesExporter:
             processed_notes = []
             
             for note in notes:
-                # Обработка основных полей заметки
                 processed_note = {
                     'title': note['title'],
                     'content': note['content'],
                     'created': note['created'],
-                    'modified': note['modified'],
-                    'attachments': []
+                    'modified': note['modified']
                 }
-                
-                # Обработка вложений
-                for attachment in note.get('attachments', []):
-                    if 'id' in attachment and 'name' in attachment:
-                        processed_attachment = {
-                            'filename': attachment['name'],
-                            'mime_type': self._get_mime_type(attachment['name']),
-                            'content': self._get_attachment_content(attachment['id'])
-                        }
-                        processed_note['attachments'].append(processed_attachment)
-                
                 processed_notes.append(processed_note)
                 
             return processed_notes

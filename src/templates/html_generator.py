@@ -15,7 +15,6 @@ class HTMLGenerator:
         Returns:
             str: HTML разметка заметки
         """
-        attachments_html = self._generate_attachments_html(note.get("attachments", []))
         dates_html = self._generate_dates_html(
             note.get("created_date"), note.get("modified_date")
         )
@@ -26,46 +25,14 @@ class HTMLGenerator:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{note['title']}</title>
-   
+    <link rel="stylesheet" href="../static/css/style.css">
 </head>
 <body>
     <h1>{note['title']}</h1>
     {dates_html}
     <div class="content">{note['content']}</div>
-    {attachments_html}
 </body>
 </html>"""
-
-    def _generate_attachments_html(self, attachments: List[Dict]) -> str:
-        """Генерирует HTML для вложений"""
-        if not attachments:
-            return ""
-
-        attachments_list = []
-        for att in attachments:
-            filename = att["filename"]
-            mime_type = att.get("mime_type", "").lower()
-
-            if mime_type.startswith("image/"):
-                attachments_list.append(
-                    f"""
-                    <div class="attachment-item">
-                        <img src="../attachments/{filename}" alt="{filename}">
-                    </div>"""
-                )
-            else:
-                attachments_list.append(
-                    f"""
-                    <div class="attachment-item">
-                        <a href="../attachments/{filename}">{filename}</a>
-                    </div>"""
-                )
-
-        return f"""
-        <div class="attachments">
-            <h2>Вложения</h2>
-            {"".join(attachments_list)}
-        </div>"""
 
     def _generate_dates_html(self, created_date, modified_date) -> str:
         """Генерирует HTML для дат создания и изменения"""
@@ -91,9 +58,7 @@ class HTMLGenerator:
         """
         notes_list = []
         for note in notes:
-            safe_filename = "".join(
-                c if c.isalnum() or c in ("-", "_") else "_" for c in note["title"]
-            ).lower()
+            safe_filename = self._create_safe_filename(note["title"])
             
             notes_list.append(
                 f"""
@@ -103,7 +68,6 @@ class HTMLGenerator:
                         <div class="note-metadata">
                             <span>Создано: {note.get('created', 'Нет даты')}</span>
                             <span>Изменено: {note.get('modified', 'Нет даты')}</span>
-                            <span>Вложений: {len(note.get('attachments', []))}</span>
                         </div>
                     </div>
                 </li>"""
